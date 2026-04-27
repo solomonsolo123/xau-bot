@@ -1,7 +1,7 @@
 import os
 import requests
 
-TOKEN = os.environ["TELEGRAM_TOKEN"]
+TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.environ["CHAT_ID"]
 
 msg="Bot is running from GitHub!"
