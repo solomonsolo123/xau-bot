@@ -1,16 +1,9 @@
-import os
-import requests
+import os,requests
 
-token = os.getenv("TELEGRAM_TOKEN")
-chat = os.getenv("CHAT_ID")
+token=os.getenv("TELEGRAM_TOKEN")
 
-r = requests.post(
-    f"https://api.telegram.org/bot{token}/sendMessage",
-    data={
-        "chat_id": chat,
-        "text": "GitHub bot test"
-    }
+r=requests.get(
+f"https://api.telegram.org/bot{token}/getMe"
 )
 
-print(r.status_code)
 print(r.text)
