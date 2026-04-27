@@ -1,0 +1,4 @@
+pandas
+ccxt
+requests
+python-telegram-bot
