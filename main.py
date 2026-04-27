@@ -1,20 +1,21 @@
 import os
 import requests
 
-# Use getenv to avoid crashing, but check if it's actually there
-token = os.getenv("TELEGRAM_TOKEN")
+token = os.environ.get("TELEGRAM_TOKEN")
+chat_id = os.environ.get("CHAT_ID") # You'll need to add this to GitHub Secrets
 
-if not token:
-    print("❌ Error: TELEGRAM_TOKEN is not set in environment variables.")
+if not token or not chat_id:
+    print("❌ Error: TELEGRAM_TOKEN or CHAT_ID is missing!")
 else:
-    # Telegram API URLs are case-sensitive; ensure the 'bot' prefix is lowercase
-    url = f"https://api.telegram.org/bot{token}/getMe"
-    
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": "🚀 Hello from GitHub Actions! Your trading bot is online."
+    }
+
     try:
-        r = requests.get(url)
-        r.raise_for_status() # This will catch 404s or 401s specifically
-        print("✅ Success!")
-        print(r.json()) # Printing as JSON is easier to read than raw text
-    except requests.exceptions.HTTPError as err:
-        print(f"❌ API Error: {err}")
-        print(f"Response Body: {r.text}")
+        response = requests.post(url, data=payload)
+        response.raise_for_status()
+        print("✅ Message sent to Telegram!")
+    except Exception as e:
+        print(f"❌ Failed to send: {e}")
