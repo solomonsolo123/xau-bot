@@ -2,7 +2,7 @@ name: Trading Bot
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "30 22 * * *"  # 10:30 PM UTC = 4:00 AM IST
   workflow_dispatch:
 
 jobs:
@@ -21,7 +21,6 @@ jobs:
       run: pip install -r requirements.txt
 
     - name: Run bot
-      # THIS IS THE MISSING PIECE
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         CHAT_ID: ${{ secrets.CHAT_ID }}
