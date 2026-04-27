@@ -4,12 +4,13 @@ import requests
 token = os.getenv("TELEGRAM_TOKEN")
 chat = os.getenv("CHAT_ID")
 
-requests.post(
+r = requests.post(
     f"https://api.telegram.org/bot{token}/sendMessage",
     data={
         "chat_id": chat,
-        "text": "GitHub bot is alive 🚀"
+        "text": "GitHub bot test"
     }
 )
 
-print("Message sent")
+print(r.status_code)
+print(r.text)
