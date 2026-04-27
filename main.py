@@ -3,105 +3,89 @@ import requests
 import yfinance as yf
 import pandas as pd
 
-# ─── CONFIGURATION ──────────────────────────────────────────
+# ─── SETTINGS ───────────────────────────────────────────────
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 
+# These settings control when your phone will buzz
+RSI_OVERBOUGHT = 70
+RSI_OVERSOLD = 30
+
 def calculate_rsi(prices, period=14):
-    """Standard RSI calculation for trend strength."""
+    """Standard RSI calculation."""
     delta = prices.diff()
     gain = (delta.where(delta > 0, 0))
     loss = (-delta.where(delta < 0, 0))
-
     avg_gain = gain.rolling(window=period).mean()
     avg_loss = loss.rolling(window=period).mean()
-
     rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    return rsi
+    return 100 - (100 / (1 + rs))
 
 def get_pro_analysis():
-    """Fetches Gold data and creates an accessible report."""
+    """Analyze Gold and return message ONLY if RSI is at extremes."""
     try:
-        # GC=F is Gold Futures
+        # Fetching Gold Futures (GC=F)
         ticker = yf.Ticker("GC=F")
         df = ticker.history(period="1mo", interval="1d")
         
         if len(df) < 15:
-            return "⚠️ ERROR: NOT ENOUGH DATA SAMPLES FOUND."
+            return None, "Warming up data..."
 
-        # Latest Price Data
         last_row = df.iloc[-1]
         h, l, c = last_row['High'], last_row['Low'], last_row['Close']
         
-        # Pivot Point Math
+        # Mathematical Calculations
         pivot = (h + l + c) / 3
         r1 = (2 * pivot) - l
         s1 = (2 * pivot) - h
-        
-        # RSI Logic
         df['RSI'] = calculate_rsi(df['Close'])
         current_rsi = df['RSI'].iloc[-1]
 
-        # Accessibility: Clear Directional Symbols
-        if c > pivot:
-            direction_label = "UP / BULLISH"
-            direction_emoji = "🟩🟩🟩 POSITIVE 🟩🟩🟩"
-        else:
-            direction_label = "DOWN / BEARISH"
-            direction_emoji = "🟥🟥🟥 NEGATIVE 🟥🟥🟥"
+        # CONDITIONAL CHECK: Only proceed if RSI is extreme
+        is_extreme = current_rsi >= RSI_OVERBOUGHT or current_rsi <= RSI_OVERSOLD
         
-        # RSI Strength Description
-        if current_rsi > 70:
-            rsi_desc = "VERY HIGH (OVERBOUGHT)"
-        elif current_rsi < 30:
-            rsi_desc = "VERY LOW (OVERSOLD)"
-        else:
-            rsi_desc = "NORMAL / NEUTRAL"
+        if not is_extreme:
+            # This returns nothing to the main function, so no message is sent
+            return None, f"Market is calm (RSI: {current_rsi:.1f})"
 
-        # Building a screen-reader friendly message
+        # Accessibility: High-Contrast Directional Blocks
+        direction_emoji = "🟩🟩🟩" if c > pivot else "🟥🟥🟥"
+        rsi_label = "⚠️ OVERBOUGHT (SELL ZONE)" if current_rsi >= 70 else "💎 OVERSOLD (BUY ZONE)"
+
+        # Building the screen-reader friendly message
         msg = (
-            f"<b>GOLD (XAUUSD) REPORT</b>\n"
+            f"🚨 <b>GOLD RSI ALERT</b> 🚨\n"
             f"━━━━━━━━━━━━━━━\n\n"
-            f"<b>TREND DIRECTION:</b>\n"
-            f"{direction_emoji}\n"
-            f"<b>{direction_label}</b>\n\n"
-            f"• <b>CURRENT PRICE:</b> ${c:,.2f}\n"
-            f"• <b>RSI STRENGTH:</b> {current_rsi:.1f}\n"
-            f"• <b>MARKET CONDITION:</b> {rsi_desc}\n\n"
-            f"<b>KEY PRICE LEVELS:</b>\n"
-            f"• 📈 <b>TARGET TOP (R1):</b> ${r1:,.2f}\n"
-            f"• 📍 <b>CENTER (PIVOT):</b> ${pivot:,.2f}\n"
+            f"<b>{rsi_label}</b>\n\n"
+            f"• <b>CURRENT RSI:</b> {current_rsi:.1f}\n"
+            f"• <b>CURRENT PRICE:</b> ${c:,.2f}\n\n"
+            f"<b>MARKET TREND:</b>\n"
+            f"{direction_emoji} {'BULLISH' if c > pivot else 'BEARISH'}\n\n"
+            f"<b>LEVELS TO WATCH:</b>\n"
+            f"• 📈 <b>TOP (R1):</b> ${r1:,.2f}\n"
             f"• 📉 <b>BOTTOM (S1):</b> ${s1:,.2f}\n\n"
             f"━━━━━━━━━━━━━━━\n"
-            f"<i>End of Analysis</i>"
+            f"<i>Check your broker now.</i>"
         )
-        return msg
+        return msg, "Extreme detected"
 
     except Exception as e:
-        return f"❌ SCRIPT ERROR: {str(e)}"
+        return f"❌ SCRIPT ERROR: {str(e)}", "Error"
 
 def send_telegram(text):
-    """Sends the formatted text to Telegram."""
+    """Sends the HTML message to your phone."""
     if not TELEGRAM_TOKEN or not CHAT_ID:
-        print("❌ ERROR: TELEGRAM_TOKEN OR CHAT_ID NOT FOUND IN SECRETS.")
         return
-
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHAT_ID, 
-        "text": text, 
-        "parse_mode": "HTML"
-    }
-    
-    try:
-        response = requests.post(url, data=payload, timeout=30)
-        response.raise_for_status()
-        print("✅ SUCCESS: MESSAGE SENT TO TELEGRAM.")
-    except Exception as e:
-        print(f"❌ TELEGRAM ERROR: {e}")
+    payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
+    requests.post(url, data=payload, timeout=30)
 
 if __name__ == "__main__":
-    print("🚀 STARTING ACCESSIBLE GOLD BOT...")
-    analysis_message = get_pro_analysis()
-    send_telegram(analysis_message)
+    print("🚀 Scanning Gold Market...")
+    message, status = get_pro_analysis()
+    
+    if message:
+        send_telegram(message)
+        print(f"✅ ALERT SENT: {status}")
+    else:
+        print(f"😴 SILENT MODE: {status}")
