@@ -1,17 +1,15 @@
 import os
 import requests
 
-TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.environ["CHAT_ID"]
-
-msg="Bot is running from GitHub!"
-
-url=f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+token = os.getenv("TELEGRAM_TOKEN")
+chat = os.getenv("CHAT_ID")
 
 requests.post(
-    url,
+    f"https://api.telegram.org/bot{token}/sendMessage",
     data={
-      "chat_id": CHAT_ID,
-      "text": msg
+        "chat_id": chat,
+        "text": "GitHub bot is alive 🚀"
     }
 )
+
+print("Message sent")
